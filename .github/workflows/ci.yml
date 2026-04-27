@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-lint:
+    name: Backend lint & type check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check app/
+      - run: mypy app/ --ignore-missing-imports
+
+  backend-test:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rezeb
+          POSTGRES_PASSWORD: rezeb_dev_password
+          POSTGRES_DB: rezeb_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql+asyncpg://rezeb:rezeb_dev_password@localhost:5432/rezeb_test
+      REDIS_URL: redis://localhost:6379/0
+      APP_SECRET_KEY: ci-secret
+      JWT_SECRET_KEY: ci-jwt-secret
+      AITUNNEL_API_KEY: dummy
+      S3_ENDPOINT_URL: http://localhost:9000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/ -v --tb=short --cov=app --cov-report=xml
+      - uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+
+  frontend-lint:
+    name: Frontend lint & type check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
