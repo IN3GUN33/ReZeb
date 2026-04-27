@@ -126,6 +126,61 @@ async def session_events(
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+@router.get("/sessions/{session_id}/photos/{photo_id}/url")
+async def get_photo_url(
+    session_id: UUID,
+    photo_id: UUID,
+    current_user: CurrentUser,
+    db: DB,
+) -> dict:
+    """Get presigned S3 URL for a photo."""
+    from app.modules.control.models import Photo
+    from app.modules.media.service import MediaService
+
+    photo = await db.get(Photo, photo_id)
+    if not photo or photo.session_id != session_id:
+        raise HTTPException(404, "Photo not found")
+    url = await MediaService().get_presigned_url(photo.s3_key)
+    return {"url": url, "expires_in": 3600}
+
+
+@router.get("/sessions/{session_id}/export")
+async def export_session(
+    session_id: UUID,
+    current_user: CurrentUser,
+    db: DB,
+    fmt: str = Query(default="json", pattern="^(json|csv)$"),
+) -> dict:
+    """Export session results as JSON or CSV-ready dict."""
+    service = ControlService(db)
+    session = await service.get_session(session_id, current_user)
+
+    data = {
+        "session_id": str(session.id),
+        "status": session.status.value,
+        "construction_type": session.construction_type,
+        "construction_type_confidence": session.construction_type_confidence,
+        "escalated": session.escalated,
+        "verdict_model": session.verdict_model,
+        "overall_assessment": session.verdict.get("overall_assessment") if session.verdict else None,
+        "requires_immediate_action": session.verdict.get("requires_immediate_action") if session.verdict else False,
+        "defects": [
+            {
+                "defect_type": d.defect_type,
+                "severity": d.severity.value,
+                "description": d.description,
+                "measurement_mm": d.measurement_mm,
+                "confidence": d.confidence,
+                "ntd_references": d.ntd_references,
+            }
+            for d in session.defects
+        ],
+        "cost_rub": session.cost_rub,
+        "disclaimer": "Заключение носит предварительный характер. Требует проверки специалистом.",
+    }
+    return data
+
+
 async def _run_analysis(session_id: UUID) -> None:
     """Background task wrapper — in production replaced by arq worker."""
     from app.db.session import AsyncSessionFactory

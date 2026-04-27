@@ -111,8 +111,15 @@ class ControlService:
             ml_construction_type = yolo_result.get("construction_type") or "не определён"
             yolo_context = self._format_yolo_results(yolo_result)
 
-            # RAG: fetch NTD context (simplified for MVP — full RAG in ntd.service)
-            ntd_context = "Нормативные требования будут добавлены после индексации НТД."
+            # RAG: fetch NTD context from indexed documents
+            from app.modules.ntd.rag import fetch_ntd_context
+            defect_types_from_yolo = [d.get("class") for d in yolo_result.get("detections", [])]
+            ntd_context = await fetch_ntd_context(
+                self.db,
+                construction_type=yolo_result.get("construction_type"),
+                defect_types=defect_types_from_yolo,
+                top_k=5,
+            )
 
             # Primary LLM analysis
             prompt = PHOTO_ANALYSIS_PROMPT.format(

@@ -5,6 +5,16 @@ import { api } from "@/lib/api";
 import type { Session, Defect } from "@/types";
 import Link from "next/link";
 
+function downloadJSON(data: unknown, filename: string) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function SeverityBadge({ severity }: { severity: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     critical: { label: "Критический", cls: "bg-red-100 text-red-700 border-red-200" },
@@ -80,7 +90,7 @@ export default function SessionDetailPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link href="/dashboard/control" className="hover:text-primary">← К списку сессий</Link>
@@ -90,7 +100,20 @@ export default function SessionDetailPage() {
           </h1>
           <p className="text-xs font-mono text-muted-foreground">{session.id}</p>
         </div>
-        <StatusBadge status={session.status} />
+        <div className="flex items-center gap-2">
+          {session.status === "completed" && (
+            <button
+              onClick={async () => {
+                const data = await api.get(`/control/sessions/${session.id}/export`).then((r) => r.data);
+                downloadJSON(data, `rezeb-session-${session.id.slice(0, 8)}.json`);
+              }}
+              className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition-colors"
+            >
+              Экспорт JSON
+            </button>
+          )}
+          <StatusBadge status={session.status} />
+        </div>
       </div>
 
       {/* Processing indicator */}
