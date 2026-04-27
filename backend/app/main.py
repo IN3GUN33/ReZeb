@@ -98,6 +98,21 @@ async def health() -> dict:
     return {"status": "ok", "version": "0.1.0"}
 
 
+@app.get("/api/v1/admin/costs", tags=["admin"])
+async def get_costs(
+    current_user: "User",
+    db: "AsyncSession",
+) -> dict:
+    from app.core.cost_tracker import check_budget_alert
+    from app.modules.auth.dependencies import get_current_user
+    from app.modules.auth.models import UserRole
+    from app.db.session import get_db
+    if current_user.role not in (UserRole.superadmin, UserRole.org_admin):
+        from app.core.exceptions import ForbiddenError
+        raise ForbiddenError("Admin only")
+    return await check_budget_alert(db)
+
+
 @app.get("/", tags=["system"])
 async def root() -> dict:
     return {"name": "ReZeb API", "docs": "/docs"}
