@@ -64,6 +64,9 @@ app.add_middleware(
 if settings.is_production:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.app_allowed_hosts)
 
+from app.core.audit_middleware import AuditMiddleware
+app.add_middleware(AuditMiddleware)
+
 
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
@@ -93,12 +96,14 @@ from app.modules.auth.admin_router import router as admin_router
 from app.modules.auth.router import router as auth_router
 from app.modules.control.router import router as control_router
 from app.modules.ntd.router import router as ntd_router
+from app.modules.projects.router import router as projects_router
 from app.modules.pto.router import router as pto_router
 
 API_PREFIX = "/api/v1"
 
 app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(admin_router, prefix=API_PREFIX)
+app.include_router(projects_router, prefix=API_PREFIX)
 app.include_router(control_router, prefix=API_PREFIX)
 app.include_router(pto_router, prefix=API_PREFIX)
 app.include_router(ntd_router, prefix=API_PREFIX)
