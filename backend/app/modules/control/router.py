@@ -77,10 +77,15 @@ async def start_analysis(
     current_user: CurrentUser,
     db: DB,
 ) -> dict:
+    from app.core.queue import enqueue_control_session
+
     service = ControlService(db)
     session = await service.start_analysis(session_id, current_user)
-    # Fire-and-forget processing (in real deployment this goes to Redis queue via worker)
-    asyncio.create_task(_run_analysis(session_id))
+    try:
+        await enqueue_control_session(str(session_id))
+    except Exception:
+        # Fallback: run in-process if Redis unavailable (dev mode)
+        asyncio.create_task(_run_analysis(session_id))
     return {"status": session.status.value, "session_id": str(session_id)}
 
 

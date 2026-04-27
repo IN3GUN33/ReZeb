@@ -16,6 +16,8 @@ from app.core.aitunnel import TokenUsage, chat_completion, vision_completion
 from app.core.config import get_settings
 from app.core.exceptions import LimitExceededError, NotFoundError
 from app.core.logging import get_logger
+from app.core.ml_client import run_yolo_inference
+from app.core.telegram import alert_critical_defect
 from app.modules.auth.models import User
 from app.modules.control.models import (
     ConstructionSession,
@@ -103,15 +105,18 @@ class ControlService:
             best_photo = next((p for p in photos if not p.is_blurry), photos[0])
             image_bytes = await self.media.download(best_photo.s3_key)
 
-            # Build YOLO context (mock for MVP if ML service unavailable)
-            yolo_context = self._format_yolo_results(best_photo.yolo_detections)
+            # Run YOLO inference via ML service
+            yolo_result = await run_yolo_inference(image_bytes, best_photo.original_filename)
+            best_photo.yolo_detections = yolo_result
+            ml_construction_type = yolo_result.get("construction_type") or "не определён"
+            yolo_context = self._format_yolo_results(yolo_result)
 
             # RAG: fetch NTD context (simplified for MVP — full RAG in ntd.service)
             ntd_context = "Нормативные требования будут добавлены после индексации НТД."
 
             # Primary LLM analysis
             prompt = PHOTO_ANALYSIS_PROMPT.format(
-                construction_type="не определён (определи автоматически)",
+                construction_type=ml_construction_type,
                 yolo_results=yolo_context,
                 ntd_context=ntd_context,
             )
@@ -160,6 +165,16 @@ class ControlService:
                     ntd_references=d.get("ntd_references", []),
                 )
                 self.db.add(defect)
+
+            # Alert on critical defects
+            for d in verdict.get("defects", []):
+                if d.get("severity") == "critical":
+                    await alert_critical_defect(
+                        str(session.id),
+                        d.get("defect_type", "unknown"),
+                        verdict.get("construction_type", "unknown"),
+                    )
+                    break
 
             session.verdict = verdict
             session.verdict_model = settings.model_complex if escalated else settings.model_vision

@@ -17,6 +17,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("startup", env=settings.app_env)
+
     # Ensure S3 buckets exist
     try:
         from app.modules.media.service import MediaService
@@ -29,6 +30,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.1)
 
     yield
+
+    # Close arq pool on shutdown
+    try:
+        from app.core.queue import _pool
+        if _pool:
+            await _pool.close()
+    except Exception:
+        pass
+
     logger.info("shutdown")
 
 
@@ -79,6 +89,7 @@ app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
 # ── Routers ─────────────────────────────────────────────────────────────────
 
 from app.modules.audit.router import router as audit_router
+from app.modules.auth.admin_router import router as admin_router
 from app.modules.auth.router import router as auth_router
 from app.modules.control.router import router as control_router
 from app.modules.ntd.router import router as ntd_router
@@ -87,6 +98,7 @@ from app.modules.pto.router import router as pto_router
 API_PREFIX = "/api/v1"
 
 app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(admin_router, prefix=API_PREFIX)
 app.include_router(control_router, prefix=API_PREFIX)
 app.include_router(pto_router, prefix=API_PREFIX)
 app.include_router(ntd_router, prefix=API_PREFIX)
@@ -95,22 +107,28 @@ app.include_router(audit_router, prefix=API_PREFIX)
 
 @app.get("/health", tags=["system"])
 async def health() -> dict:
-    return {"status": "ok", "version": "0.1.0"}
+    """Deep health check: DB + Redis connectivity."""
+    checks: dict = {"status": "ok", "version": "0.1.0"}
+    from app.db.session import engine
+    try:
+        async with engine.connect() as conn:
+            from sqlalchemy import text
+            await conn.execute(text("SELECT 1"))
+        checks["db"] = "ok"
+    except Exception as exc:
+        checks["db"] = f"error: {exc}"
+        checks["status"] = "degraded"
 
+    try:
+        from app.core.ratelimit import get_redis
+        r = get_redis()
+        await r.ping()
+        checks["redis"] = "ok"
+    except Exception as exc:
+        checks["redis"] = f"error: {exc}"
+        checks["status"] = "degraded"
 
-@app.get("/api/v1/admin/costs", tags=["admin"])
-async def get_costs(
-    current_user: "User",
-    db: "AsyncSession",
-) -> dict:
-    from app.core.cost_tracker import check_budget_alert
-    from app.modules.auth.dependencies import get_current_user
-    from app.modules.auth.models import UserRole
-    from app.db.session import get_db
-    if current_user.role not in (UserRole.superadmin, UserRole.org_admin):
-        from app.core.exceptions import ForbiddenError
-        raise ForbiddenError("Admin only")
-    return await check_budget_alert(db)
+    return checks
 
 
 @app.get("/", tags=["system"])

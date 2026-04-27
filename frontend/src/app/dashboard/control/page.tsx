@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { Session } from "@/types";
 
@@ -18,6 +19,7 @@ function severityLabel(s: string) {
 
 export default function ControlPage() {
   const qc = useQueryClient();
+  const router = useRouter();
   const [activeSession, setActiveSession] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [pollingId, setPollingId] = useState<string | null>(null);
@@ -202,7 +204,7 @@ export default function ControlPage() {
               <div
                 key={s.id}
                 className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-accent"
-                onClick={() => setPollingId(s.id)}
+                onClick={() => router.push(`/dashboard/control/${s.id}`)}
               >
                 <div>
                   <p className="text-sm font-medium">{s.construction_type ?? "Тип не определён"}</p>

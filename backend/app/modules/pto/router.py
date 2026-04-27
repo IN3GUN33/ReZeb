@@ -20,10 +20,14 @@ async def create_query(
     current_user: CurrentUser,
     db: DB,
 ) -> PTOQueryRead:
+    from app.core.queue import enqueue_pto_query
+
     service = PTOService(db)
     query = await service.create_query(current_user, data.raw_text, data.project_id)
-    # Fire-and-forget processing
-    asyncio.create_task(_run_query(query.id))
+    try:
+        await enqueue_pto_query(str(query.id))
+    except Exception:
+        asyncio.create_task(_run_query(query.id))
     return PTOQueryRead.model_validate(query)
 
 
