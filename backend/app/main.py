@@ -94,6 +94,7 @@ app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.admin_router import router as admin_router
 from app.modules.auth.apikey_router import router as apikey_router
+from app.modules.auth.profile_router import router as profile_router
 from app.modules.auth.router import router as auth_router
 from app.modules.control.router import router as control_router
 from app.modules.ntd.router import router as ntd_router
@@ -105,6 +106,7 @@ API_PREFIX = "/api/v1"
 
 app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(apikey_router, prefix=API_PREFIX)
+app.include_router(profile_router, prefix=API_PREFIX)
 app.include_router(admin_router, prefix=API_PREFIX)
 app.include_router(projects_router, prefix=API_PREFIX)
 app.include_router(control_router, prefix=API_PREFIX)
