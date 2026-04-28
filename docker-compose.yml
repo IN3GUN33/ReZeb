@@ -106,6 +106,10 @@ services:
       dockerfile: Dockerfile
     container_name: rezeb-ml-service
     restart: unless-stopped
+    environment:
+      ROBOFLOW_API_KEY: ${ROBOFLOW_API_KEY:-}
+      ROBOFLOW_MODEL: ${ROBOFLOW_MODEL:-concrete-defect-detection-zuym8/1}
+      YOLO_CONFIDENCE_THRESHOLD: ${YOLO_CONFIDENCE_THRESHOLD:-0.45}
     ports:
       - "8001:8001"
     networks:
