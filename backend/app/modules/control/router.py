@@ -181,6 +181,28 @@ async def export_session(
     return data
 
 
+@router.post("/sessions/{session_id}/feedback", status_code=status.HTTP_204_NO_CONTENT)
+async def submit_feedback(
+    session_id: UUID,
+    current_user: CurrentUser,
+    db: DB,
+    data: dict,
+) -> None:
+    """Submit user feedback on analysis results (stored in audit log)."""
+    from app.modules.audit.service import AuditService
+    from app.modules.control.service import ControlService
+
+    service = ControlService(db)
+    await service.get_session(session_id, current_user)  # ownership check
+    await AuditService(db).log(
+        action="control_feedback",
+        user_id=current_user.id,
+        entity_type="control_session",
+        entity_id=str(session_id),
+        payload=data,
+    )
+
+
 async def _run_analysis(session_id: UUID) -> None:
     """Background task wrapper — in production replaced by arq worker."""
     from app.db.session import AsyncSessionFactory

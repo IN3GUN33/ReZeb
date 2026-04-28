@@ -97,6 +97,7 @@ from app.modules.auth.apikey_router import router as apikey_router
 from app.modules.auth.profile_router import router as profile_router
 from app.modules.auth.router import router as auth_router
 from app.modules.control.router import router as control_router
+from app.modules.media.router import router as media_router
 from app.modules.ntd.router import router as ntd_router
 from app.modules.projects.router import router as projects_router
 from app.modules.pto.registry_router import router as pto_registry_router
@@ -110,6 +111,7 @@ app.include_router(profile_router, prefix=API_PREFIX)
 app.include_router(admin_router, prefix=API_PREFIX)
 app.include_router(projects_router, prefix=API_PREFIX)
 app.include_router(control_router, prefix=API_PREFIX)
+app.include_router(media_router, prefix=API_PREFIX)
 app.include_router(pto_router, prefix=API_PREFIX)
 app.include_router(pto_registry_router, prefix=API_PREFIX)
 app.include_router(ntd_router, prefix=API_PREFIX)

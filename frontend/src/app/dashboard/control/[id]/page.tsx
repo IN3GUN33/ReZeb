@@ -2,6 +2,7 @@
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { DefectPhotoCanvas } from "@/components/control/DefectPhotoCanvas";
 import type { Session, Defect } from "@/types";
 import Link from "next/link";
 
@@ -204,25 +205,60 @@ export default function SessionDetailPage() {
         </div>
       )}
 
-      {/* Photos */}
+      {/* Photos with bbox overlay */}
       {session.photos.length > 0 && (
-        <div className="rounded-xl border bg-card p-5">
-          <h2 className="font-semibold mb-3">Фотографии ({session.photos.length})</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {session.photos.map((p) => (
-              <div key={p.id} className="rounded-lg border p-2 space-y-1">
-                <p className="text-xs font-medium truncate">{p.original_filename}</p>
-                <div className="flex gap-2 text-xs text-muted-foreground flex-wrap">
-                  {p.is_blurry && <span className="text-orange-600">⚠ Размыто</span>}
-                  {p.has_aruco_marker && <span className="text-blue-600">📏 ArUco</span>}
-                  {p.sharpness_score != null && (
-                    <span>Резкость: {Math.round(p.sharpness_score)}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="rounded-xl border bg-card p-5 space-y-4">
+          <h2 className="font-semibold">Фотографии ({session.photos.length})</h2>
+          {session.photos.map((p) => (
+            <PhotoWithOverlay
+              key={p.id}
+              sessionId={session.id}
+              photoId={p.id}
+              filename={p.original_filename}
+              isBlurry={p.is_blurry}
+              hasAruco={p.has_aruco_marker}
+              sharpness={p.sharpness_score}
+              defects={session.defects}
+            />
+          ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function PhotoWithOverlay({
+  sessionId, photoId, filename, isBlurry, hasAruco, sharpness, defects,
+}: {
+  sessionId: string;
+  photoId: string;
+  filename: string;
+  isBlurry: boolean;
+  hasAruco: boolean;
+  sharpness: number | null;
+  defects: Defect[];
+}) {
+  const { data: urlData } = useQuery<{ url: string }>({
+    queryKey: ["photo-url", sessionId, photoId],
+    queryFn: () =>
+      api.get(`/control/sessions/${sessionId}/photos/${photoId}/url`).then((r) => r.data),
+    staleTime: 1000 * 60 * 10, // 10 min — presigned URL lifetime
+  });
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2 items-center flex-wrap">
+        <p className="text-xs font-medium truncate max-w-xs">{filename}</p>
+        {isBlurry && <span className="text-xs text-orange-600">⚠ Размыто</span>}
+        {hasAruco && <span className="text-xs text-blue-600">📏 ArUco</span>}
+        {sharpness != null && (
+          <span className="text-xs text-muted-foreground">Резкость: {Math.round(sharpness)}</span>
+        )}
+      </div>
+      {urlData?.url ? (
+        <DefectPhotoCanvas photoUrl={urlData.url} defects={defects} />
+      ) : (
+        <div className="h-32 rounded-lg bg-muted animate-pulse" />
       )}
     </div>
   );

@@ -37,8 +37,10 @@ class Settings(BaseSettings):
     model_embeddings: str = "text-embedding-3-large"
     embedding_dimensions: int = 3072
 
-    # ML Service
+    # ML Service / Roboflow
     ml_service_url: str = "http://ml-service:8001"
+    roboflow_api_key: str = ""
+    roboflow_model: str = "concrete-defect-detection-zuym8/1"
     yolo_confidence_threshold: float = 0.45
     escalation_confidence_threshold: float = 0.70
 

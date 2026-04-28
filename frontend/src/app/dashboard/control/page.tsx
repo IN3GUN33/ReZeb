@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { CameraCapture } from "@/components/camera/CameraCapture";
 import type { Session } from "@/types";
 
 function severityColor(s: string) {
@@ -94,32 +95,44 @@ export default function ControlPage() {
 
       {activeSession && (
         <div className="rounded-xl border bg-card p-6 space-y-4">
-          <h2 className="font-semibold">Сессия создана</h2>
-          <div className="rounded-lg border-2 border-dashed border-border p-8 text-center">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => setFiles(Array.from(e.target.files ?? []))}
-              className="hidden"
-              id="file-upload"
-            />
-            <label htmlFor="file-upload" className="cursor-pointer">
-              <div className="text-4xl mb-2">📷</div>
-              <p className="text-sm text-muted-foreground">Нажмите для выбора фотографий (JPEG, PNG)</p>
-              {files.length > 0 && (
-                <p className="text-sm font-medium mt-2 text-primary">
-                  Выбрано: {files.length} {files.length === 1 ? "фото" : "фото"}
-                </p>
-              )}
-            </label>
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Новая сессия</h2>
+            {files.length > 0 && (
+              <span className="text-xs bg-primary/10 text-primary rounded-full px-2 py-0.5 font-medium">
+                {files.length} фото добавлено
+              </span>
+            )}
           </div>
+
+          <CameraCapture
+            onCapture={(file) => setFiles((prev) => [...prev, file])}
+          />
+
+          {files.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Добавленные фото:</p>
+              <div className="flex flex-wrap gap-2">
+                {files.map((f, i) => (
+                  <div key={i} className="flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs">
+                    <span className="truncate max-w-32">{f.name}</span>
+                    <button
+                      onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleStartAnalysis}
             disabled={files.length === 0 || analyze.isPending || uploadPhoto.isPending}
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {analyze.isPending || uploadPhoto.isPending ? "Обработка..." : "Запустить анализ"}
+            {analyze.isPending || uploadPhoto.isPending ? "Загрузка и анализ..." : "Запустить анализ"}
           </button>
         </div>
       )}
