@@ -69,3 +69,64 @@ export interface RegistryItem {
   category: string | null;
   manufacturer: string | null;
 }
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  location: string | null;
+  status: "active" | "completed" | "archived";
+}
+
+export type UserRole = "admin" | "engineer" | "viewer";
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  is_active: boolean;
+  is_verified: boolean;
+}
+
+export interface NTDDocument {
+  id: string;
+  code: string;
+  title: string;
+  doc_type: string;
+  version: string | null;
+}
+
+export interface NTDClause {
+  id: string;
+  document_id: string;
+  clause_number: string;
+  content: string;
+  score?: number;
+}
+
+export interface APIKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  created_at: string;
+  last_used_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface AuditEvent {
+  id: string;
+  user_id: string | null;
+  action: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface BudgetStats {
+  monthly_cost_rub: number;
+  monthly_limit_rub: number;
+  ratio: number;
+  alert: boolean;
+}

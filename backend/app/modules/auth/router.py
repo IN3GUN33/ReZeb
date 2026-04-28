@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.modules.auth.dependencies import CurrentUser
 from app.modules.auth.schemas import (
+    ForgotPasswordRequest,
     LoginRequest,
     RefreshRequest,
+    ResetPasswordRequest,
     TokenPair,
     UserCreate,
     UserRead,
@@ -47,3 +49,19 @@ async def logout(data: RefreshRequest, db: DB) -> None:
 @router.get("/me", response_model=UserRead)
 async def me(current_user: CurrentUser) -> UserRead:
     return UserRead.model_validate(current_user)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password(data: ForgotPasswordRequest, db: DB) -> dict:
+    service = AuthService(db)
+    token = await service.forgot_password(data.email)
+    response: dict = {"message": "Если аккаунт существует, инструкции отправлены на email"}
+    if token:
+        response["debug_token"] = token  # only present in APP_DEBUG=true
+    return response
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password(data: ResetPasswordRequest, db: DB) -> None:
+    service = AuthService(db)
+    await service.reset_password(data.token, data.new_password)

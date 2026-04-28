@@ -1,4 +1,5 @@
 import hashlib
+import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -76,6 +77,38 @@ class AuthService:
         db_token = result.scalar_one_or_none()
         if db_token:
             db_token.revoked_at = datetime.now(UTC)
+
+    async def forgot_password(self, email: str) -> str | None:
+        """Generate a password-reset token stored in Redis (TTL 1h).
+
+        Returns the token only in debug mode (for dev/test convenience).
+        In production, integrate with an email provider here.
+        """
+        from app.core.ratelimit import get_redis
+        user = await self._get_by_email(email)
+        if not user:
+            return None  # silent fail — don't leak account existence
+        token = secrets.token_urlsafe(32)
+        r = get_redis()
+        await r.setex(f"pwd_reset:{token}", 3600, str(user.id))
+        if settings.app_debug:
+            return token
+        # TODO: send email with reset link in production
+        return None
+
+    async def reset_password(self, token: str, new_password: str) -> None:
+        from app.core.ratelimit import get_redis
+        r = get_redis()
+        user_id_bytes = await r.get(f"pwd_reset:{token}")
+        if not user_id_bytes:
+            raise ForbiddenError("Invalid or expired reset token")
+        from uuid import UUID as _UUID
+        user = await self.db.get(User, _UUID(user_id_bytes.decode()))
+        if not user:
+            raise NotFoundError("User not found")
+        user.hashed_password = hash_password(new_password)
+        await r.delete(f"pwd_reset:{token}")
+        await self.db.flush()
 
     async def get_user_by_id(self, user_id: UUID) -> User:
         user = await self.db.get(User, user_id)
