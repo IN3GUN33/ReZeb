@@ -1,11 +1,13 @@
 """PTO module: normalization → hybrid retrieval → reranking → LLM matching."""
+
 from __future__ import annotations
 
+import contextlib
 import json
 from uuid import UUID
 
 from rapidfuzz import fuzz
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.aitunnel import chat_completion, get_embedding
@@ -30,9 +32,13 @@ class PTOService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
-    async def create_query(self, user: User, raw_text: str, project_id: UUID | None = None) -> PTOQuery:
+    async def create_query(
+        self, user: User, raw_text: str, project_id: UUID | None = None
+    ) -> PTOQuery:
         await self._check_daily_limit(user)
-        query = PTOQuery(user_id=user.id, raw_text=raw_text, project_id=project_id, status="pending")
+        query = PTOQuery(
+            user_id=user.id, raw_text=raw_text, project_id=project_id, status="pending"
+        )
         self.db.add(query)
         await self.db.flush()
         return query
@@ -88,10 +94,8 @@ class PTOService:
 
             best_id_str = match_result.get("best_match_id")
             if best_id_str:
-                try:
+                with contextlib.suppress(ValueError):
                     query.best_match_id = UUID(best_id_str)
-                except ValueError:
-                    pass
 
             query.status = "completed"
             await self.db.commit()
@@ -140,12 +144,16 @@ class PTOService:
 
                 # Fuzzy dedup
                 if existing_names:
-                    best_score = max(fuzz.token_sort_ratio(name.lower(), e.lower()) for e in existing_names)
+                    best_score = max(
+                        fuzz.token_sort_ratio(name.lower(), e.lower()) for e in existing_names
+                    )
                     if best_score >= 92:
                         skipped += 1
                         continue
 
-                item = RegistryItem(name=name, name_normalized=name.lower(), code=code, unit=unit, category=category)
+                item = RegistryItem(
+                    name=name, name_normalized=name.lower(), code=code, unit=unit, category=category
+                )
                 self.db.add(item)
                 existing_names.append(name.lower())
                 imported += 1
@@ -219,7 +227,7 @@ class PTOService:
         candidates: list[RegistryItem],
     ) -> tuple[dict, object]:
         candidates_text = "\n".join(
-            f"{i+1}. [{item.id}] {item.name} (код: {item.code or '-'}, ед: {item.unit or '-'})"
+            f"{i + 1}. [{item.id}] {item.name} (код: {item.code or '-'}, ед: {item.unit or '-'})"
             for i, item in enumerate(candidates[:5])
         )
         prompt = MATCHING_PROMPT.format(

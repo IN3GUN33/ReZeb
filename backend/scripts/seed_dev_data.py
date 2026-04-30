@@ -1,18 +1,29 @@
 """Seed development data: admin user + sample PTO registry items."""
+
 import asyncio
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app.core.security import hash_password
-from app.db.session import AsyncSessionFactory, engine
-from app.db.base import Base
 import app.db.models  # noqa: F401
+from app.core.security import hash_password
+from app.db.base import Base
+from app.db.session import AsyncSessionFactory, engine
 
 REGISTRY_ITEMS = [
-    ("КИ-001", "Кирпич керамический рядовой полнотелый М150 250×120×65 ГОСТ 530-2012", "шт", "Кирпич"),
-    ("КИ-002", "Кирпич керамический рядовой пустотелый М125 250×120×65 ГОСТ 530-2012", "шт", "Кирпич"),
+    (
+        "КИ-001",
+        "Кирпич керамический рядовой полнотелый М150 250×120×65 ГОСТ 530-2012",
+        "шт",
+        "Кирпич",
+    ),
+    (
+        "КИ-002",
+        "Кирпич керамический рядовой пустотелый М125 250×120×65 ГОСТ 530-2012",
+        "шт",
+        "Кирпич",
+    ),
     ("КИ-003", "Кирпич силикатный рядовой М150 250×120×65 ГОСТ 379-2015", "шт", "Кирпич"),
     ("БЛ-001", "Блок газобетонный D500 600×300×200 ГОСТ 31360-2007", "шт", "Блоки"),
     ("БЛ-002", "Блок газобетонный D400 625×250×250 ГОСТ 31360-2007", "шт", "Блоки"),
@@ -87,6 +98,7 @@ async def seed() -> None:
         existing = await db.execute(select(User).where(User.email == "admin@rezeb.ru"))
         if not existing.scalar_one_or_none():
             from app.modules.auth.models import UserRole
+
             admin = User(
                 email="admin@rezeb.ru",
                 hashed_password=hash_password("Admin123!"),

@@ -1,20 +1,22 @@
-import aiosmtplib
 from email.message import EmailMessage
+from pathlib import Path
+
+import aiosmtplib
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from pathlib import Path
 
 logger = get_logger(__name__)
 settings = get_settings()
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates" / "email"
 env = Environment(
-    loader=FileSystemLoader(TEMPLATES_DIR),
-    autoescape=select_autoescape(['html', 'xml'])
+    loader=FileSystemLoader(TEMPLATES_DIR), autoescape=select_autoescape(["html", "xml"])
 )
 
-async def send_email(subject: str, recipient: str, template_name: str, context: dict):
+
+async def send_email(subject: str, recipient: str, template_name: str, context: dict) -> None:
     if not settings.smtp_user or not settings.smtp_password:
         logger.warning("smtp_not_configured", recipient=recipient, template=template_name)
         return

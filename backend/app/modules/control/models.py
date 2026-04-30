@@ -2,7 +2,6 @@ import enum
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
-    ARRAY,
     Boolean,
     Enum,
     Float,
@@ -11,13 +10,14 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, SoftDeleteMixin, TimestampMixin
 
 
-class SessionStatus(str, enum.Enum):
+class SessionStatus(enum.StrEnum):
     pending = "pending"
     queued = "queued"
     processing = "processing"
@@ -25,7 +25,7 @@ class SessionStatus(str, enum.Enum):
     failed = "failed"
 
 
-class DefectSeverity(str, enum.Enum):
+class DefectSeverity(enum.StrEnum):
     acceptable = "acceptable"
     significant = "significant"
     critical = "critical"
@@ -93,7 +93,9 @@ class Photo(Base, TimestampMixin):
     # YOLO raw detections
     yolo_detections: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-    session: Mapped[ConstructionSession] = relationship("ConstructionSession", back_populates="photos")
+    session: Mapped[ConstructionSession] = relationship(
+        "ConstructionSession", back_populates="photos"
+    )
 
 
 class Defect(Base, TimestampMixin):
@@ -122,4 +124,6 @@ class Defect(Base, TimestampMixin):
     # Bounding box [x1, y1, x2, y2] normalized 0..1
     bbox: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)
 
-    session: Mapped[ConstructionSession] = relationship("ConstructionSession", back_populates="defects")
+    session: Mapped[ConstructionSession] = relationship(
+        "ConstructionSession", back_populates="defects"
+    )

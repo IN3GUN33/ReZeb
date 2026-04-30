@@ -2,7 +2,8 @@ from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import ForeignKey, Index, Integer, String, Text
-from sqlalchemy.dialects.postgresql import TSVECTOR, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config import get_settings

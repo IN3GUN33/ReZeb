@@ -2,6 +2,8 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from arq import create_pool
+from arq.connections import RedisSettings
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +16,6 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
-from arq import create_pool
-from arq.connections import RedisSettings
 from app.modules.auth.models import RefreshToken, User
 from app.modules.auth.schemas import TokenPair, UserCreate
 
@@ -117,7 +117,9 @@ class AuthService:
 
         # In real world, generate a signed token with expiration
         # For MVP, we'll use a simple approach
-        reset_token = create_access_token(str(user.id), {"type": "reset_password"}, expires_delta=timedelta(hours=1))
+        reset_token = create_access_token(
+            str(user.id), {"type": "reset_password"}, expires_delta=timedelta(hours=1)
+        )
 
         # Dispatch email task via arq
         redis = await create_pool(RedisSettings.from_dsn(settings.redis_queue_url))
@@ -129,7 +131,7 @@ class AuthService:
             context={
                 "reset_url": f"https://rezeb.ru/reset-password?token={reset_token}",
                 "full_name": user.full_name,
-            }
+            },
         )
         await redis.close()
 
@@ -152,7 +154,9 @@ class AuthService:
 
         user.hashed_password = hash_password(new_password)
         # Revoke all refresh tokens for security after password change
-        stmt = select(RefreshToken).where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+        stmt = select(RefreshToken).where(
+            RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None)
+        )
         result = await self.db.execute(stmt)
         tokens = result.scalars().all()
         for t in tokens:

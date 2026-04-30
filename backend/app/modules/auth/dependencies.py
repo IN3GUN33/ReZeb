@@ -1,15 +1,15 @@
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ForbiddenError
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.service import AuthService
-from sqlalchemy.ext.asyncio import AsyncSession
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -26,11 +26,11 @@ async def get_current_user(
         )
     try:
         payload = decode_token(credentials.credentials)
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
-        )
+        ) from exc
     if payload.get("type") != "access":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
 
@@ -38,8 +38,10 @@ async def get_current_user(
     service = AuthService(db)
     try:
         user = await service.get_user_by_id(user_id)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        ) from exc
 
     if not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account deactivated")
@@ -49,7 +51,7 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-def require_roles(*roles: UserRole):  # type: ignore[no-untyped-def]
+def require_roles(*roles: UserRole) -> Any:
     async def check(current_user: CurrentUser) -> User:
         if current_user.role not in roles and current_user.role != UserRole.superadmin:
             raise ForbiddenError("Insufficient permissions")

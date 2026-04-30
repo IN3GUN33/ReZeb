@@ -1,23 +1,22 @@
-import asyncio
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
-import pytest
 import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
+from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-TEST_DB_URL = "postgresql+asyncpg://rezeb:rezeb_dev_password@postgres:5432/rezeb_test"
+settings = get_settings()
+TEST_DB_URL = settings.database_url.replace("/rezeb", "/rezeb_test")
 
 test_engine = create_async_engine(TEST_DB_URL, echo=False)
 TestSessionFactory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @pytest_asyncio.fixture(scope="session")
-async def db_setup():
+async def db_setup() -> AsyncGenerator[None, None]:
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -26,7 +25,7 @@ async def db_setup():
 
 
 @pytest_asyncio.fixture
-async def db(db_setup) -> AsyncGenerator[AsyncSession, None]:
+async def db(db_setup: None) -> AsyncGenerator[AsyncSession, None]:
     async with TestSessionFactory() as session:
         yield session
         await session.rollback()
@@ -34,7 +33,7 @@ async def db(db_setup) -> AsyncGenerator[AsyncSession, None]:
 
 @pytest_asyncio.fixture
 async def client(db: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    async def override_get_db():
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield db
 
     app.dependency_overrides[get_db] = override_get_db

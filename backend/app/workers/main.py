@@ -1,9 +1,7 @@
 """arq background worker for heavy tasks (CV inference, LLM processing)."""
-import asyncio
-import logging
+
 from uuid import UUID
 
-from arq import cron
 from arq.connections import RedisSettings
 
 from app.core.config import get_settings
@@ -16,6 +14,7 @@ settings = get_settings()
 async def startup(ctx: dict) -> None:
     configure_logging(settings.app_debug)
     from app.db.session import AsyncSessionFactory
+
     ctx["db_factory"] = AsyncSessionFactory
     logger.info("worker_started")
 
@@ -44,8 +43,11 @@ async def process_pto_query(ctx: dict, query_id: str) -> None:
         logger.info("worker_pto_done", query_id=query_id)
 
 
-async def send_email_task(ctx: dict, subject: str, recipient: str, template_name: str, context: dict) -> None:
+async def send_email_task(
+    ctx: dict, subject: str, recipient: str, template_name: str, context: dict
+) -> None:
     from app.core.email import send_email
+
     await send_email(subject, recipient, template_name, context)
 
 

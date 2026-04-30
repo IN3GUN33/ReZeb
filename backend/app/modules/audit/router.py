@@ -1,12 +1,11 @@
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.modules.auth.dependencies import CurrentUser
 from app.modules.audit.service import AuditService
+from app.modules.auth.dependencies import CurrentUser
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 DB = Annotated[AsyncSession, Depends(get_db)]

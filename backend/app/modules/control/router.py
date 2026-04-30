@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import AsyncGenerator
 from typing import Annotated
 from uuid import UUID
 
@@ -34,8 +35,8 @@ async def create_session(
 async def list_sessions(
     current_user: CurrentUser,
     db: DB,
-    limit: int = Query(default=20, le=100),
-    offset: int = Query(default=0, ge=0),
+    limit: Annotated[int, Query(default=20, le=100)] = 20,
+    offset: Annotated[int, Query(default=0, ge=0)] = 0,
 ) -> list[SessionListItem]:
     service = ControlService(db)
     sessions = await service.list_sessions(current_user, limit=limit, offset=offset)
@@ -53,12 +54,14 @@ async def get_session(
     return SessionRead.model_validate(session)
 
 
-@router.post("/sessions/{session_id}/photos", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/sessions/{session_id}/photos", response_model=dict, status_code=status.HTTP_201_CREATED
+)
 async def upload_photo(
     session_id: UUID,
     current_user: CurrentUser,
     db: DB,
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File(...)],
 ) -> dict:
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(400, f"Unsupported file type: {file.content_type}")
@@ -92,7 +95,7 @@ async def session_events(
 ) -> StreamingResponse:
     """SSE endpoint for real-time session progress."""
 
-    async def event_generator():  # type: ignore[return]
+    async def event_generator() -> AsyncGenerator[str, None]:
         service = ControlService(db)
         import asyncio
 
