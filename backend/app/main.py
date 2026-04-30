@@ -83,6 +83,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.control.router import router as control_router
 from app.modules.ntd.router import router as ntd_router
 from app.modules.pto.router import router as pto_router
+from app.modules.test.router import router as test_router
 
 API_PREFIX = "/api/v1"
 
@@ -91,6 +92,7 @@ app.include_router(control_router, prefix=API_PREFIX)
 app.include_router(pto_router, prefix=API_PREFIX)
 app.include_router(ntd_router, prefix=API_PREFIX)
 app.include_router(audit_router, prefix=API_PREFIX)
+app.include_router(test_router, prefix=API_PREFIX)
 
 
 @app.get("/health", tags=["system"])

@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     monthly_llm_budget_rub: float = 30000.0
     budget_alert_threshold: float = 0.80
 
+    # Email (SMTP)
+    smtp_host: str = "smtp.yandex.ru"
+    smtp_port: int = 465
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@rezeb.ru"
+    smtp_use_tls: bool = True
+
     # External monitoring
     sentry_dsn: str = ""
     telegram_bot_token: str = ""

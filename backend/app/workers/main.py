@@ -44,9 +44,14 @@ async def process_pto_query(ctx: dict, query_id: str) -> None:
         logger.info("worker_pto_done", query_id=query_id)
 
 
+async def send_email_task(ctx: dict, subject: str, recipient: str, template_name: str, context: dict) -> None:
+    from app.core.email import send_email
+    await send_email(subject, recipient, template_name, context)
+
+
 class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_queue_url)
-    functions = [process_control_session, process_pto_query]
+    functions = [process_control_session, process_pto_query, send_email_task]
     on_startup = startup
     on_shutdown = shutdown
     max_jobs = 10
