@@ -56,6 +56,9 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.10.0",
 ]
 
+[tool.setuptools]
+packages = ["app"]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.2.0",
