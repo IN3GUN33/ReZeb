@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import contextlib
 import json
+from typing import Any
 from uuid import UUID
 
 from rapidfuzz import fuzz
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.aitunnel import chat_completion, get_embedding
+from app.core.aitunnel import TokenUsage, chat_completion, get_embedding
 from app.core.config import get_settings
 from app.core.exceptions import LimitExceededError, NotFoundError
 from app.core.logging import get_logger
@@ -225,7 +226,7 @@ class PTOService:
         raw: str,
         normalized: str,
         candidates: list[RegistryItem],
-    ) -> tuple[dict, object]:
+    ) -> tuple[dict[str, Any], TokenUsage]:
         candidates_text = "\n".join(
             f"{i + 1}. [{item.id}] {item.name} (код: {item.code or '-'}, ед: {item.unit or '-'})"
             for i, item in enumerate(candidates[:5])

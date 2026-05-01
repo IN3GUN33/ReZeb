@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,7 +28,7 @@ async def get_monthly_cost(db: AsyncSession) -> float:
     return float(control_total) + float(pto_total)
 
 
-async def check_budget_alert(db: AsyncSession) -> dict:
+async def check_budget_alert(db: AsyncSession) -> dict[str, Any]:
     settings = get_settings()
     total = await get_monthly_cost(db)
     budget = settings.monthly_llm_budget_rub

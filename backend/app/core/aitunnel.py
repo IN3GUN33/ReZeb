@@ -83,7 +83,7 @@ async def chat_completion(
     if response_format:
         payload["response_format"] = response_format
 
-    response = await client.chat.completions.create(**payload)  # type: ignore[arg-type]
+    response = await client.chat.completions.create(**payload)
 
     usage = response.usage
     input_tokens = usage.prompt_tokens if usage else 0

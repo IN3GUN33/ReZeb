@@ -76,7 +76,7 @@ class Settings(BaseSettings):
 
     @field_validator("app_allowed_hosts", "cors_origins", mode="before")
     @classmethod
-    def split_comma(cls, v: str | list) -> list[str]:
+    def split_comma(cls, v: str | list[str]) -> list[str]:
         if isinstance(v, str):
             return [h.strip() for h in v.split(",")]
         return v

@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, Index, String, Text, func
@@ -30,4 +31,4 @@ class AuditEvent(Base):
     entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     ip_address: Mapped[str | None] = mapped_column(String(50), nullable=True)
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
-    payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)

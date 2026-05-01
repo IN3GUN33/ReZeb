@@ -1,4 +1,5 @@
 import enum
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -51,7 +52,7 @@ class ConstructionSession(Base, TimestampMixin, SoftDeleteMixin):
     construction_type_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # LLM verdict
-    verdict: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    verdict: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     verdict_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     escalated: Mapped[bool] = mapped_column(Boolean, default=False)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -91,7 +92,7 @@ class Photo(Base, TimestampMixin):
     aruco_scale_mm_per_px: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     # YOLO raw detections
-    yolo_detections: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    yolo_detections: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
 
     session: Mapped[ConstructionSession] = relationship(
         "ConstructionSession", back_populates="photos"
@@ -119,7 +120,7 @@ class Defect(Base, TimestampMixin):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
 
     # NTD references
-    ntd_references: Mapped[list[dict]] = mapped_column(JSONB, default=list)
+    ntd_references: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
 
     # Bounding box [x1, y1, x2, y2] normalized 0..1
     bbox: Mapped[list[float] | None] = mapped_column(JSONB, nullable=True)

@@ -161,3 +161,5 @@ class AuthService:
         tokens = result.scalars().all()
         for t in tokens:
             t.revoked_at = datetime.now(UTC)
+
+        await self.db.commit()

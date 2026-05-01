@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -16,7 +17,7 @@ class DefectRead(BaseModel):
     description: str
     measurement_mm: float | None
     confidence: float
-    ntd_references: list[dict]
+    ntd_references: list[dict[str, Any]]
     bbox: list[float] | None
 
     model_config = {"from_attributes": True}
@@ -38,7 +39,7 @@ class SessionRead(BaseModel):
     status: SessionStatus
     construction_type: str | None
     construction_type_confidence: float | None
-    verdict: dict | None
+    verdict: dict[str, Any] | None
     escalated: bool
     error_message: str | None
     photos: list[PhotoRead]

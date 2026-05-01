@@ -1,5 +1,6 @@
 from email.message import EmailMessage
 from pathlib import Path
+from typing import Any
 
 import aiosmtplib
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -16,7 +17,9 @@ env = Environment(
 )
 
 
-async def send_email(subject: str, recipient: str, template_name: str, context: dict) -> None:
+async def send_email(
+    subject: str, recipient: str, template_name: str, context: dict[str, Any]
+) -> None:
     if not settings.smtp_user or not settings.smtp_password:
         logger.warning("smtp_not_configured", recipient=recipient, template=template_name)
         return

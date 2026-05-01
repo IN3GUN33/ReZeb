@@ -3,28 +3,27 @@ from __future__ import annotations
 import uuid
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any
+from typing import Annotated, Any
 
 import sentry_sdk
 import structlog
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.exceptions import AppError, app_error_handler, http_exception_handler
 from app.core.logging import configure_logging, get_logger
+from app.db.session import get_db
 from app.modules.audit.router import router as audit_router
+from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.models import User
 from app.modules.auth.router import router as auth_router
 from app.modules.control.router import router as control_router
 from app.modules.ntd.router import router as ntd_router
 from app.modules.pto.router import router as pto_router
 from app.modules.test.router import router as test_router
-
-if TYPE_CHECKING:
-    from sqlalchemy.ext.asyncio import AsyncSession
-
-    from app.modules.auth.models import User
 
 settings = get_settings()
 configure_logging(settings.app_debug)
@@ -105,15 +104,15 @@ app.include_router(test_router, prefix=API_PREFIX)
 
 
 @app.get("/health", tags=["system"])
-async def health() -> dict:
+async def health() -> dict[str, str]:
     return {"status": "ok", "version": "0.1.0"}
 
 
 @app.get("/api/v1/admin/costs", tags=["admin"])
 async def get_costs(
-    current_user: User,
-    db: AsyncSession,
-) -> dict:
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> dict[str, Any]:
     from app.core.cost_tracker import check_budget_alert
     from app.modules.auth.models import UserRole
 
@@ -125,5 +124,5 @@ async def get_costs(
 
 
 @app.get("/", tags=["system"])
-async def root() -> dict:
+async def root() -> dict[str, str]:
     return {"name": "ReZeb API", "docs": "/docs"}

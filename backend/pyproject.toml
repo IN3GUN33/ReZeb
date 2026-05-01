@@ -56,8 +56,9 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.10.0",
 ]
 
-[tool.setuptools]
-packages = ["app"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app", "app.*"]
 
 [project.optional-dependencies]
 dev = [

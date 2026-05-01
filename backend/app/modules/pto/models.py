@@ -1,4 +1,5 @@
 import enum
+from typing import Any
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
@@ -52,7 +53,7 @@ class RegistryItem(Base, TimestampMixin, SoftDeleteMixin):
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     category: Mapped[str | None] = mapped_column(String(200), nullable=True)
     manufacturer: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    extra: Mapped[dict] = mapped_column(JSONB, default=dict)
+    extra: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
 
     # Vector embedding (text-embedding-3-large, 3072 dims)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIM), nullable=True)
@@ -101,7 +102,7 @@ class PTOQuery(Base, TimestampMixin):
 
     # Results
     status: Mapped[str] = mapped_column(String(50), default="pending")
-    results: Mapped[list[dict]] = mapped_column(JSONB, default=list)
+    results: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
     best_match_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("pto.registry.id"), nullable=True
     )

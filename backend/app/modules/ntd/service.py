@@ -56,25 +56,13 @@ class NTDService:
         """Hybrid RAG search: pgvector + FTS + reranking."""
         embedding = await get_embedding(query)
 
-        text("""
-            SELECT c.id, c.clause_number, c.text, c.title, c.page_number,
-                   d.code AS doc_code, d.title AS doc_title, d.doc_type,
-                   1 - (c.embedding <=> :emb) AS score
-            FROM ntd.clauses c
-            JOIN ntd.documents d ON d.id = c.document_id
-            WHERE d.deleted_at IS NULL
-              AND c.embedding IS NOT NULL
-              :type_filter
-            ORDER BY c.embedding <=> :emb
-            LIMIT :k
-        """)
         params: dict = {"emb": str(embedding), "k": top_k * 3}
-
+        type_filter = ""
         if doc_types:
+            type_filter = "AND d.doc_type = ANY(:doc_types)"
             params["doc_types"] = doc_types
 
-        # Replace placeholder (SQLAlchemy text doesn't support conditional blocks well)
-        sql_str = """
+        sql_str = f"""
             SELECT c.id, c.clause_number, c.text, c.title, c.page_number,
                    d.code AS doc_code, d.title AS doc_title, d.doc_type,
                    1 - (c.embedding <=> :emb) AS score
@@ -82,6 +70,7 @@ class NTDService:
             JOIN ntd.documents d ON d.id = c.document_id
             WHERE d.deleted_at IS NULL
               AND c.embedding IS NOT NULL
+              {type_filter}
             ORDER BY c.embedding <=> :emb
             LIMIT :k
         """

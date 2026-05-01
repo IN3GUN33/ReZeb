@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -28,7 +29,7 @@ class PTOQueryRead(BaseModel):
     status: str
     match_status: MatchStatus | None
     confidence: float | None
-    results: list[dict]
+    results: list[dict[str, Any]]
     best_match: RegistryItemRead | None = None
 
     model_config = {"from_attributes": True}
