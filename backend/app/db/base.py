@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
-from uuid import UUID
 
-from sqlalchemy import DateTime, func, text
+from sqlalchemy import DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 

@@ -2,6 +2,8 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from arq import create_pool
+from arq.connections import RedisSettings
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,3 +108,56 @@ class AuthService:
     @staticmethod
     def _hash_token(token: str) -> str:
         return hashlib.sha256(token.encode()).hexdigest()
+
+    async def forgot_password(self, email: str) -> None:
+        user = await self._get_by_email(email)
+        if not user:
+            # We don't reveal if user exists for security
+            return
+
+        # In real world, generate a signed token with expiration
+        # For MVP, we'll use a simple approach
+        reset_token = create_access_token(
+            str(user.id), {"type": "reset_password"}, expires_delta=timedelta(hours=1)
+        )
+
+        # Dispatch email task via arq
+        redis = await create_pool(RedisSettings.from_dsn(settings.redis_queue_url))
+        await redis.enqueue_job(
+            "send_email_task",
+            subject="Password Reset - ReZeb",
+            recipient=user.email,
+            template_name="password_reset.html",
+            context={
+                "reset_url": f"https://rezeb.ru/reset-password?token={reset_token}",
+                "full_name": user.full_name,
+            },
+        )
+        await redis.close()
+
+    async def reset_password(self, token: str, new_password: str) -> None:
+        try:
+            payload = decode_token(token)
+        except Exception as exc:
+            raise ForbiddenError("Invalid or expired reset token") from exc
+
+        if payload.get("type") != "reset_password":
+            raise ForbiddenError("Invalid token type")
+
+        user_id = payload.get("sub")
+        if not user_id:
+            raise ForbiddenError("Invalid token payload")
+
+        user = await self.db.get(User, UUID(user_id))
+        if not user:
+            raise NotFoundError("User not found")
+
+        user.hashed_password = hash_password(new_password)
+        # Revoke all refresh tokens for security after password change
+        stmt = select(RefreshToken).where(
+            RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None)
+        )
+        result = await self.db.execute(stmt)
+        tokens = result.scalars().all()
+        for t in tokens:
+            t.revoked_at = datetime.now(UTC)

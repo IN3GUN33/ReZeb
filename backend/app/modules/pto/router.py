@@ -7,7 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.modules.auth.dependencies import CurrentUser
-from app.modules.pto.schemas import PTOQueryCreate, PTOQueryRead, RegistryImportResult, RegistryItemRead
+from app.modules.pto.schemas import (
+    PTOQueryCreate,
+    PTOQueryRead,
+    RegistryImportResult,
+    RegistryItemRead,
+)
 from app.modules.pto.service import PTOService
 
 router = APIRouter(prefix="/pto", tags=["pto"])
@@ -42,8 +47,8 @@ async def get_query(
 async def search_registry(
     current_user: CurrentUser,
     db: DB,
-    q: str = Query(min_length=2),
-    limit: int = Query(default=20, le=100),
+    q: Annotated[str, Query(min_length=2)],
+    limit: Annotated[int, Query(le=100)] = 20,
 ) -> list[RegistryItemRead]:
     service = PTOService(db)
     items = await service.search_registry(q, limit=limit)
@@ -54,7 +59,7 @@ async def search_registry(
 async def import_registry(
     current_user: CurrentUser,
     db: DB,
-    file: UploadFile = File(...),
+    file: Annotated[UploadFile, File(...)],
 ) -> RegistryImportResult:
     if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
         raise HTTPException(400, "Only Excel files (.xlsx, .xls) are supported")

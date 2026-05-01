@@ -1,4 +1,5 @@
 """Control module service: photo upload, quality check, async processing pipeline."""
+
 from __future__ import annotations
 
 import io
@@ -12,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.aitunnel import TokenUsage, chat_completion, vision_completion
+from app.core.aitunnel import TokenUsage, vision_completion
 from app.core.config import get_settings
 from app.core.exceptions import LimitExceededError, NotFoundError
 from app.core.logging import get_logger
@@ -40,7 +41,9 @@ class ControlService:
         self.db = db
         self.media = MediaService()
 
-    async def create_session(self, user: User, project_id: UUID | None = None) -> ConstructionSession:
+    async def create_session(
+        self, user: User, project_id: UUID | None = None
+    ) -> ConstructionSession:
         await self._check_daily_limit(user)
         session = ConstructionSession(user_id=user.id, project_id=project_id)
         self.db.add(session)
@@ -127,9 +130,10 @@ class ControlService:
             total_usage = usage
 
             # Escalation: low confidence or critical defects
-            should_escalate = (
-                verdict.get("construction_type_confidence", 1.0) < settings.escalation_confidence_threshold
-                or any(d.get("severity") == "critical" for d in verdict.get("defects", []))
+            should_escalate = verdict.get(
+                "construction_type_confidence", 1.0
+            ) < settings.escalation_confidence_threshold or any(
+                d.get("severity") == "critical" for d in verdict.get("defects", [])
             )
 
             if should_escalate:
@@ -173,7 +177,9 @@ class ControlService:
             session.cost_rub = total_usage.cost_rub
 
             await self.db.commit()
-            logger.info("session_completed", session_id=str(session_id), cost_rub=total_usage.cost_rub)
+            logger.info(
+                "session_completed", session_id=str(session_id), cost_rub=total_usage.cost_rub
+            )
 
         except Exception as exc:
             session.status = SessionStatus.failed
@@ -185,7 +191,9 @@ class ControlService:
     async def get_session(self, session_id: UUID, user: User) -> ConstructionSession:
         return await self._get_session_with_photos(session_id, user_id=user.id)
 
-    async def list_sessions(self, user: User, limit: int = 20, offset: int = 0) -> list[ConstructionSession]:
+    async def list_sessions(
+        self, user: User, limit: int = 20, offset: int = 0
+    ) -> list[ConstructionSession]:
         stmt = (
             select(ConstructionSession)
             .where(ConstructionSession.user_id == user.id, ConstructionSession.deleted_at.is_(None))
@@ -198,7 +206,9 @@ class ControlService:
 
     # ── Private helpers ──────────────────────────────────────────────────────
 
-    async def _get_session(self, session_id: UUID, user_id: UUID | None = None) -> ConstructionSession:
+    async def _get_session(
+        self, session_id: UUID, user_id: UUID | None = None
+    ) -> ConstructionSession:
         session = await self.db.get(ConstructionSession, session_id)
         if not session or session.deleted_at is not None:
             raise NotFoundError("Session not found")
@@ -211,7 +221,9 @@ class ControlService:
     ) -> ConstructionSession:
         stmt = (
             select(ConstructionSession)
-            .options(selectinload(ConstructionSession.photos), selectinload(ConstructionSession.defects))
+            .options(
+                selectinload(ConstructionSession.photos), selectinload(ConstructionSession.defects)
+            )
             .where(ConstructionSession.id == session_id)
         )
         result = await self.db.execute(stmt)

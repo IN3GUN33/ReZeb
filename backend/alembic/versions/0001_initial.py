@@ -4,7 +4,8 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-04-27 00:00:00.000000
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -12,9 +13,9 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 EMBEDDING_DIM = 3072
 
@@ -56,8 +57,12 @@ def upgrade() -> None:
     op.create_table(
         "refresh_tokens",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "user_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("auth.users.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("token_hash", sa.String(255), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked_at", sa.DateTime(timezone=True), nullable=True),
@@ -71,8 +76,9 @@ def upgrade() -> None:
     op.create_table(
         "sessions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("auth.users.id"), nullable=False),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("auth.users.id"), nullable=False
+        ),
         sa.Column("project_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("status", sa.String(50), nullable=False, server_default="pending"),
         sa.Column("construction_type", sa.String(100), nullable=True),
@@ -96,8 +102,12 @@ def upgrade() -> None:
     op.create_table(
         "photos",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("session_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("control.sessions.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("control.sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("s3_key", sa.String(500), nullable=False),
         sa.Column("original_filename", sa.String(255), nullable=False),
         sa.Column("file_size_bytes", sa.Integer(), nullable=False),
@@ -117,10 +127,18 @@ def upgrade() -> None:
     op.create_table(
         "defects",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("session_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("control.sessions.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("photo_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("control.photos.id"), nullable=True),
+        sa.Column(
+            "session_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("control.sessions.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "photo_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("control.photos.id"),
+            nullable=True,
+        ),
         sa.Column("defect_type", sa.String(100), nullable=False),
         sa.Column("severity", sa.String(50), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
@@ -152,36 +170,47 @@ def upgrade() -> None:
         schema="pto",
     )
     op.create_index("ix_pto_registry_code", "registry", ["code"], schema="pto")
-    op.create_index("ix_pto_registry_fts", "registry", ["fts_vector"],
-                    schema="pto", postgresql_using="gin")
+    op.create_index(
+        "ix_pto_registry_fts", "registry", ["fts_vector"], schema="pto", postgresql_using="gin"
+    )
 
     # ─── pto.synonyms ────────────────────────────────────────────────────────
     op.create_table(
         "synonyms",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("registry_item_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("pto.registry.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "registry_item_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("pto.registry.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("synonym", sa.Text(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         schema="pto",
     )
-    op.create_unique_constraint("uq_synonym", "synonyms",
-                                ["registry_item_id", "synonym"], schema="pto")
+    op.create_unique_constraint(
+        "uq_synonym", "synonyms", ["registry_item_id", "synonym"], schema="pto"
+    )
 
     # ─── pto.queries ─────────────────────────────────────────────────────────
     op.create_table(
         "queries",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("auth.users.id"), nullable=False),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("auth.users.id"), nullable=False
+        ),
         sa.Column("project_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("raw_text", sa.Text(), nullable=False),
         sa.Column("normalized_text", sa.Text(), nullable=True),
         sa.Column("status", sa.String(50), server_default="pending"),
         sa.Column("results", postgresql.JSONB(), server_default="[]"),
-        sa.Column("best_match_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("pto.registry.id"), nullable=True),
+        sa.Column(
+            "best_match_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("pto.registry.id"),
+            nullable=True,
+        ),
         sa.Column("match_status", sa.String(50), nullable=True),
         sa.Column("confidence", sa.Float(), nullable=True),
         sa.Column("input_tokens", sa.Integer(), server_default="0"),
@@ -216,8 +245,12 @@ def upgrade() -> None:
     op.create_table(
         "clauses",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("document_id", postgresql.UUID(as_uuid=True),
-                  sa.ForeignKey("ntd.documents.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "document_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("ntd.documents.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("clause_number", sa.String(50), nullable=False),
         sa.Column("title", sa.Text(), nullable=True),
         sa.Column("text", sa.Text(), nullable=False),
@@ -229,11 +262,15 @@ def upgrade() -> None:
         schema="ntd",
     )
     op.create_index("ix_ntd_clauses_document_id", "clauses", ["document_id"], schema="ntd")
-    op.create_index("ix_ntd_clauses_fts", "clauses", ["fts_vector"],
-                    schema="ntd", postgresql_using="gin")
     op.create_index(
-        "ix_ntd_clauses_embedding", "clauses", ["embedding"],
-        schema="ntd", postgresql_using="ivfflat",
+        "ix_ntd_clauses_fts", "clauses", ["fts_vector"], schema="ntd", postgresql_using="gin"
+    )
+    op.create_index(
+        "ix_ntd_clauses_embedding",
+        "clauses",
+        ["embedding"],
+        schema="ntd",
+        postgresql_using="ivfflat",
         postgresql_with={"lists": 50},
         postgresql_ops={"embedding": "vector_cosine_ops"},
     )
@@ -242,7 +279,9 @@ def upgrade() -> None:
     op.create_table(
         "events",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+        ),
         sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=True),
         sa.Column("user_email", sa.String(255), nullable=True),
         sa.Column("action", sa.String(100), nullable=False),
@@ -254,7 +293,9 @@ def upgrade() -> None:
         schema="audit",
     )
     op.create_index("ix_audit_events_user_id", "events", ["user_id"], schema="audit")
-    op.create_index("ix_audit_events_entity", "events", ["entity_type", "entity_id"], schema="audit")
+    op.create_index(
+        "ix_audit_events_entity", "events", ["entity_type", "entity_id"], schema="audit"
+    )
     op.create_index("ix_audit_events_created_at", "events", ["created_at"], schema="audit")
 
     # Append-only trigger for audit.events

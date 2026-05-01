@@ -1,4 +1,5 @@
 """NTD module: document ingestion, clause chunking, RAG search."""
+
 from __future__ import annotations
 
 import re
@@ -49,11 +50,13 @@ class NTDService:
         logger.info("ntd_document_added", code=code, clauses=len(clauses))
         return doc
 
-    async def search_clauses(self, query: str, doc_types: list[str] | None = None, top_k: int = 5) -> list[dict]:
+    async def search_clauses(
+        self, query: str, doc_types: list[str] | None = None, top_k: int = 5
+    ) -> list[dict]:
         """Hybrid RAG search: pgvector + FTS + reranking."""
         embedding = await get_embedding(query)
 
-        vector_sql = text("""
+        text("""
             SELECT c.id, c.clause_number, c.text, c.title, c.page_number,
                    d.code AS doc_code, d.title AS doc_title, d.doc_type,
                    1 - (c.embedding <=> :emb) AS score
@@ -65,11 +68,9 @@ class NTDService:
             ORDER BY c.embedding <=> :emb
             LIMIT :k
         """)
-        type_filter = ""
         params: dict = {"emb": str(embedding), "k": top_k * 3}
 
         if doc_types:
-            type_filter = "AND d.doc_type = ANY(:doc_types)"
             params["doc_types"] = doc_types
 
         # Replace placeholder (SQLAlchemy text doesn't support conditional blocks well)
@@ -101,7 +102,9 @@ class NTDService:
         ]
 
     async def list_documents(self) -> list[NTDDocument]:
-        stmt = select(NTDDocument).where(NTDDocument.deleted_at.is_(None)).order_by(NTDDocument.code)
+        stmt = (
+            select(NTDDocument).where(NTDDocument.deleted_at.is_(None)).order_by(NTDDocument.code)
+        )
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
@@ -114,7 +117,7 @@ class NTDService:
         texts = [c["text"] for c in clauses]
         embeddings = await get_embeddings_batch(texts)
 
-        for clause_data, emb in zip(clauses, embeddings):
+        for clause_data, emb in zip(clauses, embeddings, strict=False):
             clause = NTDClause(
                 document_id=doc_id,
                 clause_number=clause_data["number"],
@@ -140,6 +143,7 @@ class NTDService:
         if filename.lower().endswith(".pdf"):
             try:
                 import fitz  # PyMuPDF
+
                 doc = fitz.open(stream=data, filetype="pdf")
                 return "\n".join(page.get_text() for page in doc)
             except Exception:
@@ -147,7 +151,9 @@ class NTDService:
         elif filename.lower().endswith((".docx", ".doc")):
             try:
                 import io
+
                 from docx import Document
+
                 doc = Document(io.BytesIO(data))
                 return "\n".join(p.text for p in doc.paragraphs)
             except Exception:
@@ -159,7 +165,9 @@ class NTDService:
         """Split normative document text into clause-level chunks."""
         clauses = []
         # Match clause numbers like "1.1", "2.3.4", "п. 5.6" etc.
-        pattern = re.compile(r"(?:^|\n)((?:п\.\s*)?\d+(?:\.\d+)*\.?\s+.{5,}?)(?=\n(?:п\.\s*)?\d+|\Z)", re.S)
+        pattern = re.compile(
+            r"(?:^|\n)((?:п\.\s*)?\d+(?:\.\d+)*\.?\s+.{5,}?)(?=\n(?:п\.\s*)?\d+|\Z)", re.S
+        )
         matches = list(pattern.finditer(content))
 
         if not matches:

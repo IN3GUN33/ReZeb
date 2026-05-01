@@ -31,12 +31,12 @@ async def list_documents(current_user: CurrentUser, db: DB) -> list[dict]:
 async def upload_document(
     current_user: CurrentUser,
     db: DB,
-    file: UploadFile = File(...),
-    code: str = Form(...),
-    title: str = Form(...),
-    doc_type: str = Form(default="SP"),
-    version: str = Form(default=None),
-    effective_date: str = Form(default=None),
+    file: Annotated[UploadFile, File(...)],
+    code: Annotated[str, Form(...)],
+    title: Annotated[str, Form(...)],
+    doc_type: Annotated[str, Form()] = "SP",
+    version: Annotated[str | None, Form()] = None,
+    effective_date: Annotated[str | None, Form()] = None,
 ) -> dict:
     allowed = {".pdf", ".docx", ".doc", ".txt"}
     suffix = "." + (file.filename or "").rsplit(".", 1)[-1].lower()
@@ -61,8 +61,8 @@ async def upload_document(
 async def search_clauses(
     current_user: CurrentUser,
     db: DB,
-    q: str = Query(min_length=3),
-    top_k: int = Query(default=5, le=20),
+    q: Annotated[str, Query(min_length=3)],
+    top_k: Annotated[int, Query(le=20)] = 5,
 ) -> list[dict]:
     service = NTDService(db)
     return await service.search_clauses(q, top_k=top_k)

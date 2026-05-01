@@ -1,6 +1,12 @@
-from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from __future__ import annotations
 
+import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any
+
+import sentry_sdk
+import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -8,6 +14,17 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.core.config import get_settings
 from app.core.exceptions import AppError, app_error_handler, http_exception_handler
 from app.core.logging import configure_logging, get_logger
+from app.modules.audit.router import router as audit_router
+from app.modules.auth.router import router as auth_router
+from app.modules.control.router import router as control_router
+from app.modules.ntd.router import router as ntd_router
+from app.modules.pto.router import router as pto_router
+from app.modules.test.router import router as test_router
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from app.modules.auth.models import User
 
 settings = get_settings()
 configure_logging(settings.app_debug)
@@ -20,12 +37,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Ensure S3 buckets exist
     try:
         from app.modules.media.service import MediaService
+
         await MediaService().ensure_buckets()
     except Exception as exc:
         logger.warning("s3_init_failed", error=str(exc))
 
     if settings.sentry_dsn:
-        import sentry_sdk
         sentry_sdk.init(dsn=settings.sentry_dsn, traces_sample_rate=0.1)
 
     yield
@@ -56,9 +73,8 @@ if settings.is_production:
 
 
 @app.middleware("http")
-async def request_id_middleware(request: Request, call_next):  # type: ignore[no-untyped-def]
-    import uuid
-    import structlog
+async def request_id_middleware(request: Request, call_next: Any) -> Any:  # noqa: ANN401
+
     request_id = str(uuid.uuid4())
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(
@@ -78,12 +94,6 @@ app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore
 
 # ── Routers ─────────────────────────────────────────────────────────────────
 
-from app.modules.audit.router import router as audit_router
-from app.modules.auth.router import router as auth_router
-from app.modules.control.router import router as control_router
-from app.modules.ntd.router import router as ntd_router
-from app.modules.pto.router import router as pto_router
-
 API_PREFIX = "/api/v1"
 
 app.include_router(auth_router, prefix=API_PREFIX)
@@ -91,6 +101,7 @@ app.include_router(control_router, prefix=API_PREFIX)
 app.include_router(pto_router, prefix=API_PREFIX)
 app.include_router(ntd_router, prefix=API_PREFIX)
 app.include_router(audit_router, prefix=API_PREFIX)
+app.include_router(test_router, prefix=API_PREFIX)
 
 
 @app.get("/health", tags=["system"])
@@ -100,15 +111,15 @@ async def health() -> dict:
 
 @app.get("/api/v1/admin/costs", tags=["admin"])
 async def get_costs(
-    current_user: "User",
-    db: "AsyncSession",
+    current_user: User,
+    db: AsyncSession,
 ) -> dict:
     from app.core.cost_tracker import check_budget_alert
-    from app.modules.auth.dependencies import get_current_user
     from app.modules.auth.models import UserRole
-    from app.db.session import get_db
+
     if current_user.role not in (UserRole.superadmin, UserRole.org_admin):
         from app.core.exceptions import ForbiddenError
+
         raise ForbiddenError("Admin only")
     return await check_budget_alert(db)
 

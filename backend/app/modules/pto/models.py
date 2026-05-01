@@ -12,7 +12,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config import get_settings
@@ -22,7 +23,7 @@ settings = get_settings()
 EMBEDDING_DIM = settings.embedding_dimensions
 
 
-class MatchStatus(str, enum.Enum):
+class MatchStatus(enum.StrEnum):
     exact = "exact"
     analog = "analog"
     not_found = "not_found"
@@ -33,8 +34,13 @@ class RegistryItem(Base, TimestampMixin, SoftDeleteMixin):
 
     __tablename__ = "registry"
     __table_args__ = (
-        Index("ix_registry_embedding", "embedding", postgresql_using="ivfflat",
-              postgresql_with={"lists": 100}, postgresql_ops={"embedding": "vector_cosine_ops"}),
+        Index(
+            "ix_registry_embedding",
+            "embedding",
+            postgresql_using="ivfflat",
+            postgresql_with={"lists": 100},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
         Index("ix_registry_fts", "fts_vector", postgresql_using="gin"),
         {"schema": "pto"},
     )

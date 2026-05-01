@@ -1,18 +1,23 @@
 import pytest
-from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 
 
 async def _get_token(client: AsyncClient, email: str = "pto@example.com") -> str:
-    await client.post("/api/v1/auth/register", json={
-        "email": email,
-        "password": "password123",
-        "full_name": "PTO User",
-    })
-    resp = await client.post("/api/v1/auth/login", json={
-        "email": email,
-        "password": "password123",
-    })
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "password": "password123",
+            "full_name": "PTO User",
+        },
+    )
+    resp = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": email,
+            "password": "password123",
+        },
+    )
     return resp.json()["access_token"]
 
 

@@ -2,10 +2,10 @@
 AITUNNEL client — OpenAI-compatible wrapper for Claude models (via AITUNNEL aggregator).
 Implements prompt caching and token cost tracking as required by TZ.
 """
+
 from __future__ import annotations
 
 import base64
-from pathlib import Path
 from typing import Any
 
 import httpx
@@ -19,10 +19,10 @@ logger = get_logger(__name__)
 
 # Approximate cost per 1M tokens in RUB (as of 2025, via AITUNNEL)
 COST_PER_1M_TOKENS: dict[str, dict[str, float]] = {
-    "claude-sonnet-4-6":          {"input": 300.0,  "output": 1500.0, "cache_read": 30.0},
-    "claude-opus-4-7":            {"input": 1500.0, "output": 7500.0, "cache_read": 150.0},
-    "claude-haiku-4-5-20251001":  {"input": 80.0,   "output": 400.0,  "cache_read": 8.0},
-    "text-embedding-3-large":     {"input": 13.0,   "output": 0.0,    "cache_read": 0.0},
+    "claude-sonnet-4-6": {"input": 300.0, "output": 1500.0, "cache_read": 30.0},
+    "claude-opus-4-7": {"input": 1500.0, "output": 7500.0, "cache_read": 150.0},
+    "claude-haiku-4-5-20251001": {"input": 80.0, "output": 400.0, "cache_read": 8.0},
+    "text-embedding-3-large": {"input": 13.0, "output": 0.0, "cache_read": 0.0},
 }
 
 
@@ -77,7 +77,9 @@ async def chat_completion(
         "max_tokens": max_tokens,
     }
     if system:
-        payload["system"] = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
+        payload["system"] = [
+            {"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}
+        ]
     if response_format:
         payload["response_format"] = response_format
 
