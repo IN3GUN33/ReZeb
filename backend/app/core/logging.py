@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Any
 
 import structlog
 
@@ -31,5 +32,5 @@ def configure_logging(debug: bool = False) -> None:
     )
 
 
-def get_logger(name: str) -> structlog.BoundLogger:
+def get_logger(name: str) -> Any:
     return structlog.get_logger(name)

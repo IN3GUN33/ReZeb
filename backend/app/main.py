@@ -75,7 +75,6 @@ if settings.is_production:
 @app.middleware("http")
 async def request_id_middleware(request: Request, call_next: Any) -> Any:  # noqa: ANN401
 
-
     request_id = str(uuid.uuid4())
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(

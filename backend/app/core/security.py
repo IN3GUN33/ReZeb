@@ -17,9 +17,14 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(subject: str, extra: dict[str, Any] | None = None) -> str:
+def create_access_token(
+    subject: str, extra: dict[str, Any] | None = None, expires_delta: timedelta | None = None
+) -> str:
     settings = get_settings()
-    expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_access_token_expire_minutes)
+    if expires_delta:
+        expire = datetime.now(UTC) + expires_delta
+    else:
+        expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_access_token_expire_minutes)
     payload: dict[str, Any] = {"sub": subject, "exp": expire, "type": "access"}
     if extra:
         payload.update(extra)

@@ -47,8 +47,8 @@ async def get_query(
 async def search_registry(
     current_user: CurrentUser,
     db: DB,
-    q: str = Query(min_length=2),
-    limit: int = Query(default=20, le=100),
+    q: Annotated[str, Query(min_length=2)],
+    limit: Annotated[int, Query(le=100)] = 20,
 ) -> list[RegistryItemRead]:
     service = PTOService(db)
     items = await service.search_registry(q, limit=limit)

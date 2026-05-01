@@ -35,8 +35,8 @@ async def create_session(
 async def list_sessions(
     current_user: CurrentUser,
     db: DB,
-    limit: Annotated[int, Query(default=20, le=100)] = 20,
-    offset: Annotated[int, Query(default=0, ge=0)] = 0,
+    limit: Annotated[int, Query(le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[SessionListItem]:
     service = ControlService(db)
     sessions = await service.list_sessions(current_user, limit=limit, offset=offset)
